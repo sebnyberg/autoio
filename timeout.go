@@ -20,7 +20,7 @@ type TimeoutCloser struct {
 
 type CloserOpenFunc func() (io.Closer, error)
 
-func NewTimeoutCloser(openFunc CloserOpenFunc, closeAfterTime time.Duration) (io.Closer, error) {
+func NewTimeoutCloser(openFunc CloserOpenFunc, closeAfterTime time.Duration) (*TimeoutCloser, error) {
 	t := TimeoutCloser{openFunc: openFunc, closeAfterTime: closeAfterTime}
 	if err := t.init(); err != nil {
 		return nil, err
@@ -58,6 +58,15 @@ func (t *TimeoutCloser) Close() error {
 	return t.c.Close()
 }
 
+func (t *TimeoutCloser) Closed() bool {
+	select {
+	case <-t.ctx.Done():
+		return true
+	default:
+		return false
+	}
+}
+
 type TimeoutReadCloser struct {
 	openFunc       ReadCloserOpenFunc
 	closeAfterTime time.Duration
@@ -71,7 +80,7 @@ type TimeoutReadCloser struct {
 
 type ReadCloserOpenFunc func() (io.ReadCloser, error)
 
-func NewTimeoutReadCloser(openFunc ReadCloserOpenFunc, closeAfterTime time.Duration) (io.ReadCloser, error) {
+func NewTimeoutReadCloser(openFunc ReadCloserOpenFunc, closeAfterTime time.Duration) (*TimeoutReadCloser, error) {
 	t := TimeoutReadCloser{openFunc: openFunc, closeAfterTime: closeAfterTime}
 	if err := t.init(); err != nil {
 		return nil, err
@@ -109,6 +118,15 @@ func (t *TimeoutReadCloser) Close() error {
 	return t.rc.Close()
 }
 
+func (t *TimeoutReadCloser) Closed() bool {
+	select {
+	case <-t.ctx.Done():
+		return true
+	default:
+		return false
+	}
+}
+
 func (t *TimeoutReadCloser) Read(p []byte) (n int, err error) {
 	select {
 	case <-t.ctx.Done():
@@ -132,7 +150,7 @@ type TimeoutWriteCloser struct {
 
 type WriteCloserOpenFunc func() (io.WriteCloser, error)
 
-func NewTimeoutWriteCloser(openFunc WriteCloserOpenFunc, closeAfterTime time.Duration) (io.WriteCloser, error) {
+func NewTimeoutWriteCloser(openFunc WriteCloserOpenFunc, closeAfterTime time.Duration) (*TimeoutWriteCloser, error) {
 	t := TimeoutWriteCloser{openFunc: openFunc, closeAfterTime: closeAfterTime}
 	if err := t.init(); err != nil {
 		return nil, err
@@ -170,6 +188,15 @@ func (t *TimeoutWriteCloser) Close() error {
 	return t.wc.Close()
 }
 
+func (t *TimeoutWriteCloser) Closed() bool {
+	select {
+	case <-t.ctx.Done():
+		return true
+	default:
+		return false
+	}
+}
+
 func (t *TimeoutWriteCloser) Write(p []byte) (n int, err error) {
 	select {
 	case <-t.ctx.Done():
@@ -193,7 +220,7 @@ type TimeoutReadWriteCloser struct {
 
 type ReadWriteCloserOpenFunc func() (io.ReadWriteCloser, error)
 
-func NewTimeoutReadWriteCloser(openFunc ReadWriteCloserOpenFunc, closeAfterTime time.Duration) (io.ReadWriteCloser, error) {
+func NewTimeoutReadWriteCloser(openFunc ReadWriteCloserOpenFunc, closeAfterTime time.Duration) (*TimeoutReadWriteCloser, error) {
 	ac := TimeoutReadWriteCloser{openFunc: openFunc, closeAfterTime: closeAfterTime}
 	if err := ac.init(); err != nil {
 		return nil, err
@@ -207,7 +234,6 @@ func (t *TimeoutReadWriteCloser) init() error {
 	if err != nil {
 		return err
 	}
-	t.ctx, t.cancel = context.WithCancel(context.Background())
 	timer := time.AfterFunc(t.closeAfterTime, func() {
 		if err := t.Close(); err != nil {
 			t.errMtx.Lock()
@@ -229,6 +255,15 @@ func (t *TimeoutReadWriteCloser) Close() error {
 		return err
 	}
 	return t.rw.Close()
+}
+
+func (t *TimeoutReadWriteCloser) Closed() bool {
+	select {
+	case <-t.ctx.Done():
+		return true
+	default:
+		return false
+	}
 }
 
 func (t *TimeoutReadWriteCloser) Read(p []byte) (n int, err error) {
