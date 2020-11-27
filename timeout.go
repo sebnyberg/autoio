@@ -21,41 +21,41 @@ type TimeoutCloser struct {
 type CloserOpenFunc func() (io.Closer, error)
 
 func NewTimeoutCloser(openFunc CloserOpenFunc, closeAfterTime time.Duration) (io.Closer, error) {
-	ac := TimeoutCloser{openFunc: openFunc, closeAfterTime: closeAfterTime}
-	if err := ac.init(); err != nil {
+	t := TimeoutCloser{openFunc: openFunc, closeAfterTime: closeAfterTime}
+	if err := t.init(); err != nil {
 		return nil, err
 	}
-	return &ac, nil
+	return &t, nil
 }
 
-func (ac *TimeoutCloser) init() error {
+func (t *TimeoutCloser) init() error {
 	var err error
-	ac.c, err = ac.openFunc()
+	t.c, err = t.openFunc()
 	if err != nil {
 		return err
 	}
-	ac.ctx, ac.cancel = context.WithCancel(context.Background())
-	timer := time.AfterFunc(ac.closeAfterTime, func() {
-		if err := ac.Close(); err != nil {
-			ac.errMtx.Lock()
-			defer ac.errMtx.Unlock()
-			ac.err = err
+	t.ctx, t.cancel = context.WithCancel(context.Background())
+	timer := time.AfterFunc(t.closeAfterTime, func() {
+		if err := t.Close(); err != nil {
+			t.errMtx.Lock()
+			defer t.errMtx.Unlock()
+			t.err = err
 		}
 	})
-	ac.resetTimer = func() { timer.Reset(ac.closeAfterTime) }
+	t.resetTimer = func() { timer.Reset(t.closeAfterTime) }
 	return nil
 }
 
-func (ac *TimeoutCloser) Close() error {
-	ac.errMtx.Lock()
-	defer ac.errMtx.Unlock()
-	ac.cancel()
-	if ac.err != nil {
-		err := ac.err
-		ac.err = nil
+func (t *TimeoutCloser) Close() error {
+	t.errMtx.Lock()
+	defer t.errMtx.Unlock()
+	t.cancel()
+	if t.err != nil {
+		err := t.err
+		t.err = nil
 		return err
 	}
-	return ac.c.Close()
+	return t.c.Close()
 }
 
 type TimeoutReadCloser struct {
@@ -72,51 +72,51 @@ type TimeoutReadCloser struct {
 type ReadCloserOpenFunc func() (io.ReadCloser, error)
 
 func NewTimeoutReadCloser(openFunc ReadCloserOpenFunc, closeAfterTime time.Duration) (io.ReadCloser, error) {
-	ac := TimeoutReadCloser{openFunc: openFunc, closeAfterTime: closeAfterTime}
-	if err := ac.init(); err != nil {
+	t := TimeoutReadCloser{openFunc: openFunc, closeAfterTime: closeAfterTime}
+	if err := t.init(); err != nil {
 		return nil, err
 	}
-	return &ac, nil
+	return &t, nil
 }
 
-func (ac *TimeoutReadCloser) init() error {
+func (t *TimeoutReadCloser) init() error {
 	var err error
-	ac.rc, err = ac.openFunc()
+	t.rc, err = t.openFunc()
 	if err != nil {
 		return err
 	}
-	ac.ctx, ac.cancel = context.WithCancel(context.Background())
-	timer := time.AfterFunc(ac.closeAfterTime, func() {
-		if err := ac.Close(); err != nil {
-			ac.errMtx.Lock()
-			defer ac.errMtx.Unlock()
-			ac.err = err
+	t.ctx, t.cancel = context.WithCancel(context.Background())
+	timer := time.AfterFunc(t.closeAfterTime, func() {
+		if err := t.Close(); err != nil {
+			t.errMtx.Lock()
+			defer t.errMtx.Unlock()
+			t.err = err
 		}
 	})
-	ac.resetTimer = func() { timer.Reset(ac.closeAfterTime) }
+	t.resetTimer = func() { timer.Reset(t.closeAfterTime) }
 	return nil
 }
 
-func (ac *TimeoutReadCloser) Close() error {
-	ac.errMtx.Lock()
-	defer ac.errMtx.Unlock()
-	ac.cancel()
-	if ac.err != nil {
-		err := ac.err
-		ac.err = nil
+func (t *TimeoutReadCloser) Close() error {
+	t.errMtx.Lock()
+	defer t.errMtx.Unlock()
+	t.cancel()
+	if t.err != nil {
+		err := t.err
+		t.err = nil
 		return err
 	}
-	return ac.rc.Close()
+	return t.rc.Close()
 }
 
-func (ac *TimeoutReadCloser) Read(p []byte) (n int, err error) {
+func (t *TimeoutReadCloser) Read(p []byte) (n int, err error) {
 	select {
-	case <-ac.ctx.Done():
-		ac.init()
+	case <-t.ctx.Done():
+		t.init()
 	default:
 	}
-	ac.resetTimer()
-	return ac.rc.Read(p)
+	t.resetTimer()
+	return t.rc.Read(p)
 }
 
 type TimeoutWriteCloser struct {
@@ -133,51 +133,51 @@ type TimeoutWriteCloser struct {
 type WriteCloserOpenFunc func() (io.WriteCloser, error)
 
 func NewTimeoutWriteCloser(openFunc WriteCloserOpenFunc, closeAfterTime time.Duration) (io.WriteCloser, error) {
-	ac := TimeoutWriteCloser{openFunc: openFunc, closeAfterTime: closeAfterTime}
-	if err := ac.init(); err != nil {
+	t := TimeoutWriteCloser{openFunc: openFunc, closeAfterTime: closeAfterTime}
+	if err := t.init(); err != nil {
 		return nil, err
 	}
-	return &ac, nil
+	return &t, nil
 }
 
-func (ac *TimeoutWriteCloser) init() error {
+func (t *TimeoutWriteCloser) init() error {
 	var err error
-	ac.wc, err = ac.openFunc()
+	t.wc, err = t.openFunc()
 	if err != nil {
 		return err
 	}
-	ac.ctx, ac.cancel = context.WithCancel(context.Background())
-	timer := time.AfterFunc(ac.closeAfterTime, func() {
-		if err := ac.Close(); err != nil {
-			ac.errMtx.Lock()
-			defer ac.errMtx.Unlock()
-			ac.err = err
+	t.ctx, t.cancel = context.WithCancel(context.Background())
+	timer := time.AfterFunc(t.closeAfterTime, func() {
+		if err := t.Close(); err != nil {
+			t.errMtx.Lock()
+			defer t.errMtx.Unlock()
+			t.err = err
 		}
 	})
-	ac.resetTimer = func() { timer.Reset(ac.closeAfterTime) }
+	t.resetTimer = func() { timer.Reset(t.closeAfterTime) }
 	return nil
 }
 
-func (ac *TimeoutWriteCloser) Close() error {
-	ac.errMtx.Lock()
-	defer ac.errMtx.Unlock()
-	ac.cancel()
-	if ac.err != nil {
-		err := ac.err
-		ac.err = nil
+func (t *TimeoutWriteCloser) Close() error {
+	t.errMtx.Lock()
+	defer t.errMtx.Unlock()
+	t.cancel()
+	if t.err != nil {
+		err := t.err
+		t.err = nil
 		return err
 	}
-	return ac.wc.Close()
+	return t.wc.Close()
 }
 
-func (ac *TimeoutWriteCloser) Write(p []byte) (n int, err error) {
+func (t *TimeoutWriteCloser) Write(p []byte) (n int, err error) {
 	select {
-	case <-ac.ctx.Done():
-		ac.init()
+	case <-t.ctx.Done():
+		t.init()
 	default:
 	}
-	ac.resetTimer()
-	return ac.wc.Write(p)
+	t.resetTimer()
+	return t.wc.Write(p)
 }
 
 type TimeoutReadWriteCloser struct {
@@ -201,52 +201,52 @@ func NewTimeoutReadWriteCloser(openFunc ReadWriteCloserOpenFunc, closeAfterTime 
 	return &ac, nil
 }
 
-func (ac *TimeoutReadWriteCloser) init() error {
+func (t *TimeoutReadWriteCloser) init() error {
 	var err error
-	ac.rw, err = ac.openFunc()
+	t.rw, err = t.openFunc()
 	if err != nil {
 		return err
 	}
-	ac.ctx, ac.cancel = context.WithCancel(context.Background())
-	timer := time.AfterFunc(ac.closeAfterTime, func() {
-		if err := ac.Close(); err != nil {
-			ac.errMtx.Lock()
-			defer ac.errMtx.Unlock()
-			ac.err = err
+	t.ctx, t.cancel = context.WithCancel(context.Background())
+	timer := time.AfterFunc(t.closeAfterTime, func() {
+		if err := t.Close(); err != nil {
+			t.errMtx.Lock()
+			defer t.errMtx.Unlock()
+			t.err = err
 		}
 	})
-	ac.resetTimer = func() { timer.Reset(ac.closeAfterTime) }
+	t.resetTimer = func() { timer.Reset(t.closeAfterTime) }
 	return nil
 }
 
-func (ac *TimeoutReadWriteCloser) Close() error {
-	ac.errMtx.Lock()
-	defer ac.errMtx.Unlock()
-	ac.cancel()
-	if ac.err != nil {
-		err := ac.err
-		ac.err = nil
+func (t *TimeoutReadWriteCloser) Close() error {
+	t.errMtx.Lock()
+	defer t.errMtx.Unlock()
+	t.cancel()
+	if t.err != nil {
+		err := t.err
+		t.err = nil
 		return err
 	}
-	return ac.rw.Close()
+	return t.rw.Close()
 }
 
-func (ac *TimeoutReadWriteCloser) Read(p []byte) (n int, err error) {
+func (t *TimeoutReadWriteCloser) Read(p []byte) (n int, err error) {
 	select {
-	case <-ac.ctx.Done():
-		ac.init()
+	case <-t.ctx.Done():
+		t.init()
 	default:
 	}
-	ac.resetTimer()
-	return ac.rw.Read(p)
+	t.resetTimer()
+	return t.rw.Read(p)
 }
 
-func (ac *TimeoutReadWriteCloser) Write(p []byte) (n int, err error) {
+func (t *TimeoutReadWriteCloser) Write(p []byte) (n int, err error) {
 	select {
-	case <-ac.ctx.Done():
-		ac.init()
+	case <-t.ctx.Done():
+		t.init()
 	default:
 	}
-	ac.resetTimer()
-	return ac.rw.Write(p)
+	t.resetTimer()
+	return t.rw.Write(p)
 }
