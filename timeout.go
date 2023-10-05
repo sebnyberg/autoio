@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+// TimeoutWriteCloser is useful when appending to multiple sinks without an
+// exclusive lock and/or with large buffers.
 type TimeoutWriteCloser struct {
 	openFunc       WriteCloserOpenFunc
 	closeAfterTime time.Duration
